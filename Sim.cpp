@@ -1,6 +1,8 @@
 /* Sim.cpp */
 // Author: Programmer Intern Jordan (with help from my teammates! :P)
 
+//used -O3 in make file to make faster
+
 #include <iostream> // cout and stuff
 #include <algorithm> // 
 #include <vector> // for vectors
@@ -240,7 +242,7 @@ int main(int argc, char* argv[]) {
 		std::cout << "Day: " << pair.first << ", probability of a crash: " << pair.second << std::endl;
 	}
 
-
+	int last_progress = -1;
 
 	std::cout << "Simulating traffic..." << std::endl;
 	BigInteger total_num_cars = BigInteger("0"); // number of cars that traveled, use BigInteger in case of integer overflow
@@ -250,9 +252,10 @@ int main(int argc, char* argv[]) {
 	int crash_timer = 0; // cool-off period of a crash
 	for(TimeCode t = TimeCode(); t < dur; t = t + TimeCode(0, 0, 1)){
 		int progress = percentage(t.GetTimeCodeAsSeconds(), dur.GetTimeCodeAsSeconds());
-		std::cout << "\r" << progress << "%" << std::flush;
-
-		ALL();
+		if (progress != last_progress) { //made the progress only print if it changed to reduce constant printing
+			std::cout << "\r" << progress << "%" << std::flush;
+			last_progress = progress;
+		}
 
 		// --- New Cars Show Up (maybe) ---
 		int num_new_cars = poisson(new_car_rate);
@@ -301,18 +304,19 @@ int main(int argc, char* argv[]) {
 	}
 	std::cout << std::endl;
 
-
+	last_progress = -1;
 	// Find the times at which certain amount of cars are present
 	std::cout << "Computing sample statistics..." << std::endl;
 	std::unordered_map<int, std::vector<TimeCode>> count_times;
 	for(size_t i = 0; i < data.size(); i++){
 		int progress = percentage(i, data.size());
-		std::cout << "\r" << progress << "%" << std::flush;
+		if (progress != last_progress) {
+			std::cout << "\r" << progress << "%" << std::flush;
+			last_progress = progress;
+		}
 		data_point_pair cur = data[i];
-		if(count_times.find(cur.num_cars) != count_times.end()){
-			std::vector<TimeCode> times_list = count_times[cur.num_cars];
-			times_list.push_back(cur.t);
-			count_times[cur.num_cars] = times_list;
+		if(count_times.find(cur.num_cars) != count_times.end()){ //made directly push data into count_times instead of copying which makes it slow
+			count_times[data[i].num_cars].push_back(data[i].t); //this originally took 33 seconds
 		} else {
 			count_times[cur.num_cars] = std::vector<TimeCode>{cur.t};
 		}
@@ -346,6 +350,5 @@ int main(int argc, char* argv[]) {
 	generateTerminalOutput(res);
 	generateHTMLoutput(res);
 
-
-	return 0;
+	return 0; //originally took about 4 minutes
 }
